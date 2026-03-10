@@ -61,11 +61,11 @@ export function kimchiRoutes(): RoutesConfig {
       premiums: {
         BTC: {
           official_fx: { premium_pct: -1.43, krw_price: 103635000, global_usd: 70794, global_krw_equivalent: 105137585 },
-          effective_fx: { premium_pct: 0.20, usdt_krw: 1461 },
+          effective_fx: { premium_pct: 0.20, usdt_krw: 1461, usdt_krw_source: "Upbit USDT/KRW" },
           executable: { bid_premium_pct: -1.43, ask_premium_pct: -1.43, kr_bid: 103635000, kr_ask: 103637000, global_bid_usd: 70794, global_ask_usd: 70800 },
         },
       },
-      fx: { official_usd_krw: 1485.12, effective_usd_krw: 1461, source: "ECB via Frankfurter (daily update)", rate_date: "2026-03-10" },
+      fx: { official_usd_krw: 1485.12, official_source: "ECB via Frankfurter (daily update)", effective_usd_krw: 1461, effective_source: "Upbit USDT/KRW", rate_date: "2026-03-10" },
       meta: { exchange_kr: "Upbit", exchange_global: "Binance", global_price_source: "Binance", assets_tracked: ["BTC", "ETH", "XRP", "SOL", "DOGE"] },
     },
   );

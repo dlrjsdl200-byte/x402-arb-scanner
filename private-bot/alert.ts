@@ -60,14 +60,14 @@ async function checkKimchi(): Promise<string[]> {
           `${direction} *${asset} 김치프리미엄* ${official > 0 ? "+" : ""}${official}%\n` +
           `  KRW: ₩${data.official_fx.krw_price.toLocaleString()}\n` +
           `  Global: $${data.official_fx.global_usd.toLocaleString()}\n` +
-          `  환율: ${result.fx.official_usd_krw} (${result.fx.rate_date})`
+          `  환율: ${result.fx.official_usd_krw} (ECB, ${result.fx.rate_date})`
         );
       }
 
       if (Math.abs(effective) >= THRESHOLDS.kimchi_effective_pct) {
         const direction = effective > 0 ? "📈" : "📉";
         alerts.push(
-          `${direction} *${asset} 실효프리미엄* ${effective > 0 ? "+" : ""}${effective}%\n` +
+          `${direction} *${asset} 실효프리미엄 (Upbit USDT/KRW)* ${effective > 0 ? "+" : ""}${effective}%\n` +
           `  USDT/KRW: ${data.effective_fx.usdt_krw}`
         );
       }

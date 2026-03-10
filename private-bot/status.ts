@@ -44,7 +44,7 @@ async function main() {
   if (kimchi.status === "fulfilled") {
     const k = kimchi.value;
     lines.push("*🇰🇷 김치프리미엄*");
-    lines.push(`환율: 공식 ${k.fx.official_usd_krw} / 실효 ${k.fx.effective_usd_krw}`);
+    lines.push(`환율: 공식 ${k.fx.official_usd_krw} (ECB) / 실효 ${k.fx.effective_usd_krw} (Upbit USDT/KRW)`);
     lines.push(`소스: ${k.meta.global_price_source} | ${k.fx.rate_date}`);
     for (const [asset, data] of Object.entries(k.premiums)) {
       const o = data.official_fx.premium_pct;

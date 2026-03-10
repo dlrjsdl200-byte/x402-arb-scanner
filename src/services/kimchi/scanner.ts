@@ -60,6 +60,7 @@ export async function scanKimchiPremium(): Promise<Omit<KimchiPremiumResult, "re
       effective_fx: {
         premium_pct: round(effectivePremium),
         usdt_krw: effectiveKrw,
+        usdt_krw_source: "Upbit USDT/KRW",
       },
       executable: {
         bid_premium_pct: round(bidPremium),
@@ -81,8 +82,9 @@ export async function scanKimchiPremium(): Promise<Omit<KimchiPremiumResult, "re
     premiums,
     fx: {
       official_usd_krw: fx.officialUsdKrw,
+      official_source: fx.source,
       effective_usd_krw: upbit.usdtKrw,
-      source: fx.source,
+      effective_source: "Upbit USDT/KRW",
       rate_date: fx.rateDate,
     },
     meta: {

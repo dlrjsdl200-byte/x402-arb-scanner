@@ -21,6 +21,7 @@ export interface KimchiAssetPremium {
   effective_fx: {
     premium_pct: number;
     usdt_krw: number;
+    usdt_krw_source: string;
   };
   executable: {
     bid_premium_pct: number;
@@ -35,8 +36,9 @@ export interface KimchiAssetPremium {
 
 export interface FxRates {
   official_usd_krw: number;
+  official_source: string;
   effective_usd_krw: number;
-  source: string;
+  effective_source: string;
   rate_date?: string;
 }
 
