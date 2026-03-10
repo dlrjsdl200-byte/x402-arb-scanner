@@ -5,7 +5,7 @@ const prediction = new Hono();
 
 prediction.get("/", async (c) => {
   const result = await scanPredictionArbitrage();
-  return c.json(result);
+  return c.json({ ...result, request_cost_usdc: 0.002 });
 });
 
 export default prediction;

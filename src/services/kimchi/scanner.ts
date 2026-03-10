@@ -5,13 +5,14 @@ import type { KimchiPremiumResult, KimchiAssetPremium } from "../../types/index.
 
 const ASSETS = ["BTC", "ETH", "XRP", "SOL", "DOGE"];
 
-export async function scanKimchiPremium(): Promise<KimchiPremiumResult> {
+export async function scanKimchiPremium(): Promise<Omit<KimchiPremiumResult, "request_cost_usdc">> {
   const [upbit, binance, fx] = await Promise.all([
     upbitCache.get(),
     binanceCache.get(),
     fxCache.get(),
   ]);
 
+  const isBidAskDegraded = binance.source === "CoinGecko";
   const premiums: Record<string, KimchiAssetPremium> = {};
 
   for (const asset of ASSETS) {
@@ -23,7 +24,7 @@ export async function scanKimchiPremium(): Promise<KimchiPremiumResult> {
     const krwPrice = upbitTicker.trade_price;
     const globalUsd = parseFloat(binanceTicker.lastPrice);
     const officialKrw = fx.officialUsdKrw;
-    const effectiveKrw = upbit.usdtKrw; // USDT/KRW from Upbit
+    const effectiveKrw = upbit.usdtKrw;
 
     // Tier 1: Official FX rate premium
     const globalKrwEquivalent = globalUsd * officialKrw;
@@ -67,6 +68,7 @@ export async function scanKimchiPremium(): Promise<KimchiPremiumResult> {
         kr_ask: krAsk,
         global_bid_usd: globalBid,
         global_ask_usd: globalAsk,
+        ...(isBidAskDegraded ? { data_degraded: true } : {}),
       },
     };
   }
@@ -81,10 +83,12 @@ export async function scanKimchiPremium(): Promise<KimchiPremiumResult> {
       official_usd_krw: fx.officialUsdKrw,
       effective_usd_krw: upbit.usdtKrw,
       source: fx.source,
+      rate_date: fx.rateDate,
     },
     meta: {
       exchange_kr: "Upbit",
-      exchange_global: "Binance",
+      exchange_global: binance.source === "Binance" ? "Binance" : "Multiple",
+      global_price_source: binance.source,
       assets_tracked: ASSETS,
       calculation_method: "3-tier (official FX, effective FX via USDT/KRW, executable bid/ask)",
     },

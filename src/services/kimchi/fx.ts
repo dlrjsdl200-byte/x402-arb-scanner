@@ -10,6 +10,7 @@ interface FrankfurterResponse {
 
 export interface FxData {
   officialUsdKrw: number;
+  rateDate: string;
   source: string;
   fetchedAt: number;
 }
@@ -21,7 +22,8 @@ async function fetchFxRate(): Promise<FxData> {
 
   return {
     officialUsdKrw: data.rates.KRW ?? 0,
-    source: "ECB via Frankfurter",
+    rateDate: data.date,
+    source: "ECB via Frankfurter (daily update)",
     fetchedAt: Date.now(),
   };
 }

@@ -3,7 +3,7 @@ import { scanDexArbitrage } from "../dex/scanner.js";
 import { scanPredictionArbitrage } from "../prediction/scanner.js";
 import type { UnifiedScanResult } from "../../types/index.js";
 
-export async function scanAll(): Promise<UnifiedScanResult> {
+export async function scanAll(): Promise<Omit<UnifiedScanResult, "request_cost_usdc">> {
   const errors: string[] = [];
 
   const [kimchi, dex, prediction] = await Promise.allSettled([

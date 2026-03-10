@@ -1,7 +1,6 @@
 import { fetchJson } from "../../lib/http.js";
 import { TTLCache } from "../../lib/cache.js";
 
-// Binance ticker format (used as our internal type regardless of source)
 export interface GlobalTickerData {
   symbol: string;
   lastPrice: string;
@@ -18,7 +17,8 @@ export interface BinanceData {
 
 const ASSETS = ["BTC", "ETH", "XRP", "SOL", "DOGE"];
 
-// Primary: Binance (may fail from US IPs / Vercel)
+// ── Primary: Binance (may 451 from US IPs) ──
+
 interface BinanceTicker {
   symbol: string;
   lastPrice: string;
@@ -43,7 +43,60 @@ async function fetchFromBinance(): Promise<BinanceData> {
   return { tickers: tickerMap, source: "Binance", fetchedAt: Date.now() };
 }
 
-// Fallback: CoinGecko (works globally, no API key needed)
+// ── Secondary: Kraken (US accessible, has bid/ask) ──
+
+interface KrakenResponse {
+  error: string[];
+  result: Record<string, {
+    a: [string, string, string]; // ask [price, wholeLotVol, lotVol]
+    b: [string, string, string]; // bid
+    c: [string, string];         // last trade [price, vol]
+    v: [string, string];         // volume
+  }>;
+}
+
+const KRAKEN_PAIRS: Record<string, string> = {
+  BTC: "XBTUSD",
+  ETH: "ETHUSD",
+  XRP: "XRPUSD",
+  SOL: "SOLUSD",
+  DOGE: "DOGEUSD",
+};
+
+const KRAKEN_RESULT_KEYS: Record<string, string> = {
+  BTC: "XXBTZUSD",
+  ETH: "XETHZUSD",
+  XRP: "XXRPZUSD",
+  SOL: "SOLUSD",
+  DOGE: "XDGUSD",
+};
+
+async function fetchFromKraken(): Promise<BinanceData> {
+  const pairs = Object.values(KRAKEN_PAIRS).join(",");
+  const data = await fetchJson<KrakenResponse>(
+    `https://api.kraken.com/0/public/Ticker?pair=${pairs}`,
+  );
+
+  if (data.error?.length > 0) throw new Error(data.error[0]);
+
+  const tickerMap: Record<string, GlobalTickerData> = {};
+  for (const [asset, resultKey] of Object.entries(KRAKEN_RESULT_KEYS)) {
+    const ticker = data.result[resultKey];
+    if (!ticker) continue;
+    tickerMap[asset] = {
+      symbol: `${asset}USDT`,
+      lastPrice: ticker.c[0],
+      bidPrice: ticker.b[0],
+      askPrice: ticker.a[0],
+      volume: ticker.v[0],
+    };
+  }
+
+  return { tickers: tickerMap, source: "Kraken", fetchedAt: Date.now() };
+}
+
+// ── Tertiary: CoinGecko (no bid/ask) ──
+
 interface CoinGeckoSimplePrice {
   [id: string]: { usd: number };
 }
@@ -74,7 +127,7 @@ async function fetchFromCoinGecko(): Promise<BinanceData> {
     tickerMap[asset] = {
       symbol: `${asset}USDT`,
       lastPrice: price,
-      bidPrice: price, // CoinGecko doesn't provide bid/ask
+      bidPrice: price, // CoinGecko has no bid/ask
       askPrice: price,
       volume: "0",
     };
@@ -83,13 +136,18 @@ async function fetchFromCoinGecko(): Promise<BinanceData> {
   return { tickers: tickerMap, source: "CoinGecko", fetchedAt: Date.now() };
 }
 
+// ── 3-tier fallback: Binance → Kraken → CoinGecko ──
+
 async function fetchGlobalPrices(): Promise<BinanceData> {
   try {
     return await fetchFromBinance();
   } catch {
-    // Binance blocked (451 from US IPs) — fall back to CoinGecko
-    return await fetchFromCoinGecko();
+    try {
+      return await fetchFromKraken();
+    } catch {
+      return await fetchFromCoinGecko();
+    }
   }
 }
 
-export const binanceCache = new TTLCache(fetchGlobalPrices, 5_000); // 5s TTL
+export const binanceCache = new TTLCache(fetchGlobalPrices, 5_000);

@@ -52,19 +52,21 @@ export function kimchiRoutes(): RoutesConfig {
   return makeRoutes(
     "/scan/kimchi",
     PRICES.kimchi,
-    "Kimchi Premium — KRW crypto premium tracking with 3-tier calculation",
+    "Kimchi Premium — KRW crypto premium tracking with 3-tier calculation (official FX, effective FX via USDT/KRW, executable bid/ask)",
     {
       success: true,
+      request_cost_usdc: 0.001,
       timestamp: "2026-03-10T10:00:00.000Z",
-      staleness_seconds: 2,
+      staleness_seconds: 0,
       premiums: {
         BTC: {
-          official_fx: { premium_pct: 3.2, krw_price: 138000000, global_usd: 97000 },
-          effective_fx: { premium_pct: 2.8, usdt_krw: 1385.5 },
-          executable: { bid_premium_pct: 2.6, ask_premium_pct: 3.0 },
+          official_fx: { premium_pct: -1.43, krw_price: 103635000, global_usd: 70794, global_krw_equivalent: 105137585 },
+          effective_fx: { premium_pct: 0.20, usdt_krw: 1461 },
+          executable: { bid_premium_pct: -1.43, ask_premium_pct: -1.43, kr_bid: 103635000, kr_ask: 103637000, global_bid_usd: 70794, global_ask_usd: 70800 },
         },
       },
-      meta: { fx_source: "Bank of Korea", exchange_kr: "Upbit", exchange_global: "Binance" },
+      fx: { official_usd_krw: 1485.12, effective_usd_krw: 1461, source: "ECB via Frankfurter (daily update)", rate_date: "2026-03-10" },
+      meta: { exchange_kr: "Upbit", exchange_global: "Binance", global_price_source: "Binance", assets_tracked: ["BTC", "ETH", "XRP", "SOL", "DOGE"] },
     },
   );
 }
@@ -73,21 +75,24 @@ export function dexRoutes(): RoutesConfig {
   return makeRoutes(
     "/scan/dex",
     PRICES.dex,
-    "DEX Arbitrage — Cross-DEX price discrepancy detection across chains",
+    "DEX Arbitrage — Cross-DEX price discrepancy detection across Ethereum, Base, Arbitrum, Optimism (DEX-only, no CEX)",
     {
       success: true,
+      request_cost_usdc: 0.002,
       timestamp: "2026-03-10T10:00:00.000Z",
       opportunities: [
         {
-          pair: "WETH/USDC",
-          buy: { dex: "Uniswap V3", chain: "Ethereum", price: 3498.5 },
-          sell: { dex: "SushiSwap", chain: "Arbitrum", price: 3512.1 },
-          spread_pct: 0.39,
-          estimated_profit_usdc: 13.6,
+          pair: "WETH/USD",
+          buy: { dex: "uniswap_v3", chain: "Ethereum", chain_id: 1, price: 2050.5 },
+          sell: { dex: "aerodrome", chain: "Base", chain_id: 8453, price: 2058.1 },
+          spread_pct: 0.37,
+          estimated_profit_per_unit_usd: 7.6,
+          executable_volume_usd: 500000,
+          confidence: "medium",
         },
       ],
-      total_pairs_scanned: 50,
-      staleness_seconds: 5,
+      total_pairs_scanned: 2,
+      meta: { dexes_scanned: ["uniswap_v3", "aerodrome"], chains_scanned: ["Ethereum", "Base"], data_source: "DexScreener API (free, DEX-only, no key)" },
     },
   );
 }
@@ -96,23 +101,26 @@ export function predictionRoutes(): RoutesConfig {
   return makeRoutes(
     "/scan/prediction",
     PRICES.prediction,
-    "Prediction Market Arbitrage — Cross-market event pricing discrepancies",
+    "Prediction Market Arbitrage — Intra-market probability mispricing detection on Polymarket",
     {
       success: true,
+      request_cost_usdc: 0.002,
       timestamp: "2026-03-10T10:00:00.000Z",
       opportunities: [
         {
           event: "2026 US Presidential Election",
-          outcome: "Democrat Win",
-          prices: [
-            { market: "Polymarket", price: 0.52 },
-            { market: "Kalshi", price: 0.48 },
-          ],
-          spread_pct: 8.33,
-          type: "cross_market",
+          outcome: "Yes / No",
+          type: "intra_market",
+          prices: [{ market: "Polymarket", price: 0.52 }, { market: "Polymarket", price: 0.47 }],
+          spread_pct: 1.0,
+          implied_probability_sum: 0.99,
+          category: "politics",
         },
       ],
-      staleness_seconds: 10,
+      total_events_scanned: 42,
+      threshold: { single_market_pct: 0.5, multi_market_pct: 1.0 },
+      notice: "No opportunities found above threshold. Market is currently efficient.",
+      meta: { markets_scanned: ["Polymarket"], data_source: "Polymarket Gamma API (free, no key)" },
     },
   );
 }
@@ -124,11 +132,13 @@ export function unifiedRoutes(): RoutesConfig {
     "Unified Scanner — All arbitrage types in one call (kimchi + DEX + prediction)",
     {
       success: true,
+      request_cost_usdc: 0.003,
       timestamp: "2026-03-10T10:00:00.000Z",
-      kimchi: { top_premium: { asset: "BTC", premium_pct: 3.2 } },
-      dex: { top_opportunity: { pair: "WETH/USDC", spread_pct: 0.39 } },
-      prediction: { top_opportunity: { event: "US Election", spread_pct: 8.33 } },
-      total_opportunities: 12,
+      kimchi: { premiums: { BTC: { official_fx: { premium_pct: -1.43 } } }, staleness_seconds: 0 },
+      dex: { opportunities: [{ pair: "WETH/USD", spread_pct: 0.37 }], staleness_seconds: 0 },
+      prediction: { opportunities: [], staleness_seconds: 0 },
+      total_opportunities: 6,
+      errors: [],
     },
   );
 }

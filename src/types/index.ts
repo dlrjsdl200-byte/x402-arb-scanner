@@ -3,6 +3,7 @@
 export interface KimchiPremiumResult {
   success: boolean;
   timestamp: string;
+  request_cost_usdc: number;
   staleness_seconds: number;
   estimated_ttl_seconds: number;
   premiums: Record<string, KimchiAssetPremium>;
@@ -28,6 +29,7 @@ export interface KimchiAssetPremium {
     kr_ask: number;
     global_bid_usd: number;
     global_ask_usd: number;
+    data_degraded?: boolean;
   };
 }
 
@@ -35,11 +37,13 @@ export interface FxRates {
   official_usd_krw: number;
   effective_usd_krw: number;
   source: string;
+  rate_date?: string;
 }
 
 export interface KimchiMeta {
   exchange_kr: string;
   exchange_global: string;
+  global_price_source: string;
   assets_tracked: string[];
   calculation_method: string;
 }
@@ -49,6 +53,7 @@ export interface KimchiMeta {
 export interface DexArbResult {
   success: boolean;
   timestamp: string;
+  request_cost_usdc: number;
   staleness_seconds: number;
   estimated_ttl_seconds: number;
   opportunities: DexOpportunity[];
@@ -62,8 +67,8 @@ export interface DexOpportunity {
   buy: { dex: string; chain: string; chain_id: number; price: number };
   sell: { dex: string; chain: string; chain_id: number; price: number };
   spread_pct: number;
-  estimated_profit_usdc: number;
-  volume_24h_usd: number;
+  estimated_profit_per_unit_usd: number;
+  executable_volume_usd: number;
   confidence: "high" | "medium" | "low";
 }
 
@@ -78,10 +83,16 @@ export interface DexMeta {
 export interface PredictionArbResult {
   success: boolean;
   timestamp: string;
+  request_cost_usdc: number;
   staleness_seconds: number;
   estimated_ttl_seconds: number;
   opportunities: PredictionOpportunity[];
   total_events_scanned: number;
+  notice?: string;
+  threshold: {
+    single_market_pct: number;
+    multi_market_pct: number;
+  };
   meta: PredictionMeta;
 }
 
@@ -105,6 +116,7 @@ export interface PredictionMeta {
 export interface UnifiedScanResult {
   success: boolean;
   timestamp: string;
+  request_cost_usdc: number;
   kimchi: { premiums: Record<string, KimchiAssetPremium>; staleness_seconds: number } | null;
   dex: { opportunities: DexOpportunity[]; staleness_seconds: number } | null;
   prediction: { opportunities: PredictionOpportunity[]; staleness_seconds: number } | null;

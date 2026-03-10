@@ -21,10 +21,18 @@ interface PolymarketMarket {
   closed: boolean;
 }
 
-async function fetchPolymarketOpportunities(): Promise<PredictionOpportunity[]> {
+// Thresholds
+const SINGLE_MARKET_THRESHOLD = 0.005; // 0.5% deviation from 1.0
+const MULTI_MARKET_THRESHOLD = 0.01;   // 1% for multi-outcome events
+
+interface PredictionCacheData {
+  opportunities: PredictionOpportunity[];
+  eventsScanned: number;
+}
+
+async function fetchPolymarketOpportunities(): Promise<PredictionCacheData> {
   const opportunities: PredictionOpportunity[] = [];
 
-  // Fetch active events from Polymarket
   const events = await fetchJson<PolymarketEvent[]>(
     "https://gamma-api.polymarket.com/events?active=true&closed=false&limit=50&order=volume&ascending=false",
     15_000,
@@ -45,10 +53,7 @@ async function fetchPolymarketOpportunities(): Promise<PredictionOpportunity[]> 
 
         const sum = prices.reduce((a, b) => a + b, 0);
 
-        // If sum deviates from 1.0 by > 1%, there's an arb opportunity
-        // sum < 1.0: buy all outcomes cheaply
-        // sum > 1.0: overpriced — could short
-        if (Math.abs(sum - 1.0) > 0.01) {
+        if (Math.abs(sum - 1.0) > SINGLE_MARKET_THRESHOLD) {
           const spreadPct = Math.abs(sum - 1.0) * 100;
 
           opportunities.push({
@@ -70,8 +75,7 @@ async function fetchPolymarketOpportunities(): Promise<PredictionOpportunity[]> 
       }
     }
 
-    // Multi-market arb within same event: if event has multiple binary markets
-    // that are logically exclusive, check if their "Yes" prices sum to != 1.0
+    // Multi-market arb within same event
     if (event.markets.length >= 2) {
       const yesAcrossMarkets: Array<{ question: string; price: number; volume: number }> = [];
 
@@ -82,7 +86,7 @@ async function fetchPolymarketOpportunities(): Promise<PredictionOpportunity[]> 
           if (prices.length >= 1) {
             yesAcrossMarkets.push({
               question: market.question,
-              price: prices[0], // "Yes" price
+              price: prices[0],
               volume: parseFloat(market.volume) || 0,
             });
           }
@@ -93,8 +97,7 @@ async function fetchPolymarketOpportunities(): Promise<PredictionOpportunity[]> 
 
       if (yesAcrossMarkets.length >= 2) {
         const sumYes = yesAcrossMarkets.reduce((a, b) => a + b.price, 0);
-        // For mutually exclusive outcomes, sum should be ~1.0
-        if (Math.abs(sumYes - 1.0) > 0.02 && yesAcrossMarkets.length <= 10) {
+        if (Math.abs(sumYes - 1.0) > MULTI_MARKET_THRESHOLD && yesAcrossMarkets.length <= 10) {
           opportunities.push({
             event: event.title,
             outcome: `${yesAcrossMarkets.length} outcomes`,
@@ -113,13 +116,16 @@ async function fetchPolymarketOpportunities(): Promise<PredictionOpportunity[]> 
     }
   }
 
-  return opportunities.sort((a, b) => b.spread_pct - a.spread_pct);
+  return {
+    opportunities: opportunities.sort((a, b) => b.spread_pct - a.spread_pct),
+    eventsScanned: events.length,
+  };
 }
 
-const predictionCache = new TTLCache(fetchPolymarketOpportunities, 30_000); // 30s TTL
+const predictionCache = new TTLCache(fetchPolymarketOpportunities, 30_000);
 
-export async function scanPredictionArbitrage(): Promise<PredictionArbResult> {
-  const opportunities = await predictionCache.get();
+export async function scanPredictionArbitrage(): Promise<Omit<PredictionArbResult, "request_cost_usdc">> {
+  const { opportunities, eventsScanned } = await predictionCache.get();
 
   return {
     success: true,
@@ -127,7 +133,14 @@ export async function scanPredictionArbitrage(): Promise<PredictionArbResult> {
     staleness_seconds: predictionCache.stalenessSeconds,
     estimated_ttl_seconds: 30,
     opportunities,
-    total_events_scanned: 50,
+    total_events_scanned: eventsScanned,
+    notice: opportunities.length === 0
+      ? "No opportunities found above threshold. Market is currently efficient."
+      : undefined,
+    threshold: {
+      single_market_pct: SINGLE_MARKET_THRESHOLD * 100,
+      multi_market_pct: MULTI_MARKET_THRESHOLD * 100,
+    },
     meta: {
       markets_scanned: ["Polymarket"],
       data_source: "Polymarket Gamma API (free, no key)",
