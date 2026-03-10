@@ -1,0 +1,36 @@
+{
+  "name": "x402-arb-scanner",
+  "version": "1.0.0",
+  "description": "Arbitrage Opportunity Scanner — x402 pay-per-call API for DEX, prediction market, and kimchi premium arbitrage",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "x402",
+    "arbitrage",
+    "dex",
+    "prediction-market",
+    "kimchi-premium",
+    "agent"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@hono/node-server": "^1.19.11",
+    "@x402/core": "^2.6.0",
+    "@x402/evm": "^2.6.0",
+    "@x402/extensions": "^2.6.0",
+    "@x402/hono": "^2.6.0",
+    "dotenv": "^16.4.5",
+    "hono": "^4.7.0",
+    "jose": "^6.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
